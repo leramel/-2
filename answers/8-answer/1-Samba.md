@@ -8,94 +8,129 @@
 apt-get update
 apt-get install samba
 ```
+![alt text](image-6.png)
 
-## 2. ЧТо такое побщая папка, зачем оно может быть нужно?
+## 2. ЧТо такое общая папка, зачем оно может быть нужно?
 
-Это каталог на сервере, к которому по сети могут обращаться другие компьютеры по протоколу SMB/CIFS.
+это каталог на сервере, доступ к которому предоставляется по сети другим компьютерам через протокол SMB/CIFS.
 
-Используется, чтобы централизованно хранить файлы, совместно работать над файлами в локальной сети, раздавать общие ресурсы
+Она нужна, чтобы обмениваться файлами между компьютерами в локальной сети, централизованно хранить документы, музыку, фильмы, организовать общий доступ для группы пользователей.
 
 ## 3. Создайте общую папку без пароля с правами только на чтение файлов
 
 создаю каталог и права на него
-
 ```
-mkdir -p /srv/samba/public
-chmod 755 /srv/samba/public
+kdir -p /srv/samba/public-read
+chmod 755 /srv/samba/public-read
+chown nobody:nobody /srv/samba/public-read
 ```
+![alt text](image-11.png)
 
-потом с помощью нано в /etc/samba/smb.conf добавляю
+и создаю текстовый файл, который потом будем проверять
 
-![alt text](image.png)
+`ip a` узнаем айпи моей виртуалки
 
-все перезапускаю systemctl restart smb nmb
+192.168.64.4
 
-Теперь любой клиент в сети, не вводя логин/пароль, может подключиться к шару public, но только читать содержимое.
+Открываю терминал и подключаюсь к Samba-шаре
+![alt text](image-12.png)
+
+файл виден
+
+Копируем файл с сервера на Mac
+
+![alt text](image-13.png)
+
+Проверяем чтение, где ! — команда выполняется на Mac, а не на Samba-сервере
+
+![alt text](image-14.png)
+
+текст отображается — чтение работает
+
+*Проверка записи:*
+
+![alt text](image-15.png)
+
+Запись запрещена ух ты
+
+*Пробуем удалить файл test_read.txt:*
+
+![alt text](image-16.png)
+
+И удаление запрещено
+
+Т.е папка public-read работает только как чтение
 
 ## 4. Создайте общую папку с паролем с правами на чтение и запись
 
-![alt text](image-1.png)
+Создаем пользователя user1, потом
 
-опять пароль и 
+![alt text](image-18.png)
 
-![alt text](image-2.png)
+и добавляем в конец [private-write]
+
+![alt text](image-17.png)
+
+Проверяем через терминал
+
+![alt text](image-19.png)
+
+видно что запись и удаление работают.
 
 ## 5. Создайте общую папку с доступом для какой-то группы с полными правами
 
-Создать группу и каталог:
-```
-groupadd smbgrp
-mkdir -p /srv/samba/group
-chown root:smbgrp /srv/samba/group
-chmod 2770 /srv/samba/group 
-```
+Создаем группу и добавляем пользователей. Затем создаём папку для шары и добавляем шару в /etc/samba/smb.conf.
+В конце перезапускаем Samba.
 
-![alt text](image-3.png)
+![alt text](image-22.png)
 
-В smb.conf:
+Открываю конфиг `nano /etc/samba/smb.conf`
 
-![alt text](image-4.png)
+![alt text](image-21.png)
+ 
+ и перезапускаю samba `systemctl restart smb nmb`
 
-Тогда только пользователи из группы smbgrp будут иметь полный доступ
+Проверяю
+
+ ![alt text](image-23.png)
+
+В папке можно создавать, изменять и удалять файлы. Папка group-full работает с паролем и даёт полный доступ для группы samba-users.
 
 ## 6. Создайте общую папку в которой у одной группы будет полный доступ, а у другой только доступ на чтение.
 
-Третья группа не должна иметь к ней доступа
+![alt text](image-24.png)
 
-Допустим, есть три группы:
-*grp_full* — полный доступ;
-*grp_read* — только чтение;
-*grp_none* — доступа нет.
+Дальше настраиваем права на файловой системе. Чтобы одна группа имела полный доступ, другая — только чтение, а третья — ничего, используем ACL.
 
-Создаем группы и каталог
-```
-groupadd grp_full
-groupadd grp_read
-groupadd grp_none
+![alt text](image-25.png)
 
-mkdir -p /srv/samba/mixed
-chown root:grp_full /srv/samba/mixed
-chmod 2770 /srv/samba/mixed
-```
-
-Добавляем пользователей
+Добавляем шару в /etc/samba/smb.conf. Добавляю в конец:
 
 ```
-usermod -aG grp_full user_full1
-usermod -aG grp_read user_read1
-usermod -aG grp_none user_none1
+[complex-share]
+   comment = Разные права для групп
+   path = /srv/samba/complex-share
+   browseable = yes
+   read only = no
+   writable = yes
+   guest ok = no
+   force group = full-access
+   create mask = 0775
+   directory mask = 0775
 ```
 
-Настройки в smb.conf
+и перезапускаю samba: `systemctl restart smb nmb`
 
-![alt text](image-5.png)
+*Проверяем:*
 
-Только участники этих групп могут вообще подключиться к шару. Пользователи из grp_none даже не пройдут аутентификацию.
+![alt text](image-26.png)
 
-`read only = yes` — базовый режим: у всех только чтение.
+put и rm прошли без ошибок — запись и удаление работают, пользователь user_full имеет полный доступ.
 
-`write list = @grp_full` — участникам grp_full Samba дополнительно даёт права на запись 
+аналогичная проверка для других подгрупп
 
-`grp_full` — полный доступ
-`grp_read` — только чтение
-`grp_none` — вообще не видят шар / не могут зайти.
+Подключаемся под user_read - smbclient //192.168.64.4/complex-share -U user_read
+ls работает, put выдаёт NT_STATUS_ACCESS_DENIED — только чтение.
+
+Подключаемся под user_no - smbclient //192.168.64.4/complex-share -U user_no
+Подключение не проходит — доступ запрещён.
