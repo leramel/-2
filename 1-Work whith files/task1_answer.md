@@ -25,9 +25,9 @@ sudo chage -E 0 user1 (истечение срока действия аккау
 Нельзя, потому что это главный идентификатор
 ```shell
 $ sudo useradd user1
-```
-useradd: user 'user1' already exists
 
+useradd: user 'user1' already exists
+```
 useradd проверяет не совпадает ли имя с существующим
 ## 5. Можно ли создать двух пользователей с одинаковым UID?
 Можно, но надо это явно указать
