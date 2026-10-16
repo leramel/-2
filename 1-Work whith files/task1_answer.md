@@ -136,3 +136,4 @@ ls
 Папка project/ и все временные файлы удалены.
   
 <img width="640" height="350" alt="cLSPtZyUQyLeQDNzv_lJc6L3OUZqE3Dz-d-q2jUgyxbuLt9fW2SlAzvDoUoWRh9UG5d5WbPNmJF0eEI2afCz9SNjYKZNcQ" src="https://github.com/user-attachments/assets/8be11d0e-95ec-4c29-9292-f63a9384a2ee" />
+
